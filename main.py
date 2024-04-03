@@ -98,10 +98,10 @@ def load_data(data_keys=[]) :
         name = str(data_keys[0]).strip()
         print(f"выборка по контакту={name}")
         if len(name) == 0:
-            print_red("Имя контакта не может быть пустым!")
+            print_red("Имя контакта не может быть пустым!", DEFAULT_COLOR)
             return
         if ph.get(name) == None:
-            print_red("Контакт не найден!")
+            print_red("Контакт не найден!", DEFAULT_COLOR)
             return {}      
         return {name : ph[name]}
     elif (len(data_keys) == 2): # возвращаем выбранный атрибут name
@@ -235,9 +235,6 @@ def program_cycle():
             data = load_data([name])
             if len(data) == 1:  
                 print(data)
-            #     print_red("Контакт не найден!")
-            # else:    
-            #     print(data)
         elif (com == "5"): # удаление
             print_blue("Удаление записи")
             name = input("Введите имя контакта для удаления: ")       
@@ -264,7 +261,7 @@ def convert_to_str(data = load_data()):
             else:
                 str_val = val  
             str_atr += f"\n \t {atr}: {str_val}"
-        str += f"{DATA_DEFAULT_KEY_NAME}: {k}{str_atr}  \n" 
+        str += f"{DATA_DEFAULT_KEY_NAME}: {k}{str_atr}\n" 
     return str
 
 def get_field_names(phones, fieldNames):
@@ -285,29 +282,34 @@ def get_field_names(phones, fieldNames):
             count+=1
     fn.extend(fieldNames[-2:])
 
+# Проверка на валидность полей (не пустые поля) 
+# valid_checks - для каждого поля свои проверки на валидность
+def check_and_get_values(msg, title, field_names, field_values, valid_checks = []):
+    while 1:
+        errmsg = msg            
+        for i, field_name in enumerate(field_names):
+            if field_values[i].strip() == "":
+                errmsg += "Поле '{}' не должно быть пустым!\n".format(field_name)
+        if errmsg == msg:
+            print("errmsg == msg + ")
+            return field_values # no problems found
+        field_values = multenterbox(errmsg, title, field_names, field_values)
+        if field_values is None:           
+            print("Cancel")
+            return []  
+  
 def save_chois(data = load_data()):
-    msg = "Введите информацию для нового контакта \n (если требуется несколько телефонов - ввод через запятую)"
+    msg = "Введите информацию для нового контакта \n (если требуется несколько телефонов - ввод через запятую)\n"
     title = "Сохранение записи"
-    phones = 1
     field_names = [DATA_DEFAULT_KEY_NAME, DATA_PHONES_KEY, DATA_BIRTHDAY_KEY, DATA_EMAIL_KEY]   
     field_values = multenterbox(msg, title, field_names)
     if field_values is None:
         print("Cancel")
         return
     # Проверка на пустые поля
-    while 1:
-        errmsg = msg + '\n'            
-        for i, field_name in enumerate(field_names):
-            if field_values[i].strip() == "":
-                errmsg += "Поле '{}' не должно быть пустым!\n".format(field_name)
-        if errmsg == msg + '\n':
-            print("errmsg == msg + ")
-            break # no problems found
-        field_values = multenterbox(errmsg, title, field_names, field_values)
-        if field_values is None:           
-            print("Cancel")
-            break   
-    if field_values is None:           
+    field_values = check_and_get_values(msg, title, field_names, field_values)
+
+    if len(field_values) == 0:           
         print("Cancel")
         return
     
@@ -315,7 +317,7 @@ def save_chois(data = load_data()):
     # убираем пробелы в номерах телефона если есть
     for phone in field_values[1].split(','):
         phones.append(phone.strip()) 
-    print(f"phones={phones}") 
+
     data[field_values[0]] = {
         DATA_PHONES_KEY : phones, 
         DATA_BIRTHDAY_KEY : field_values[2], 
@@ -324,19 +326,62 @@ def save_chois(data = load_data()):
     print(f"data_save={data}")    
     save_data(data)
 
+def find_chois():
+    msg = "Введите название контакта\n "
+    title = "Поиск записи"
+    field_names = [DATA_DEFAULT_KEY_NAME]   
+    field_values = multenterbox(msg, title, field_names)
+    if field_values is None:
+        print("Cancel")
+        return
+
+    while 1:  
+        # Проверка на пустые поля
+        field_values = check_and_get_values(msg, title, field_names, field_values)
+        if len(field_values) == 0:           
+            print("Cancel")
+            return   
+        data = load_data([field_values[0]])   
+        print(f"find_cont={data}")
+        errmsg = ""   
+        # проверка наличия записи контакта       
+        if len(data) == 0:
+            errmsg += "Контакт '{}' не найден! Введите другое название\n".format(field_values[0])        
+            field_values = multenterbox(errmsg, title, field_names, field_values)
+        else:          
+            field_values = multenterbox(convert_to_str(data), title, field_names, field_values) 
+        if field_values is None:           
+            print("Cancel")
+            return              
+    
 def view_cycle():
     non_stop = True
     while non_stop:    
         com = list(COMMAND.values())
         choice = choicebox("Выберите запрос", "Главная форма", com)
         print(f"choice={choice}")
-        if choice == COMMAND.get("1"):          
+        if choice == COMMAND.get("q") or choice == 'x' or choice == None:
+            print("Exit")       
+            return
+        elif choice == COMMAND.get("1"): # отображение всего списка
+            print("Просмотр записей")             
             data = view_all()  
             msgbox(convert_to_str(data), "Просмотр записей")
-        elif choice == COMMAND.get("2"):
+        elif choice == COMMAND.get("2"): # сохранение
+            print("Сохранение записи")
             save_chois()
             continue
-        elif choice == COMMAND.get("q") or choice == 'x' or choice == None:     
-            return
-
+        elif choice == COMMAND.get("3"): # импорт
+            print("Импорт данных")     
+            pass
+        elif choice == COMMAND.get("4"): # поиск
+            print("Поиск записи")            
+            find_chois()
+        elif choice == COMMAND.get("5"): # удаление
+            print("Удаление записи")  
+            pass
+        elif choice == COMMAND.get("6"): # изменение данных  
+            print("Изменение записи")          
+            pass
+    
 view_cycle()
