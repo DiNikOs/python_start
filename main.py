@@ -1,15 +1,15 @@
 import sqlite3 as sl
 import json
 import os
-from easygui import *
+from easygui import * 
 
 # Константа с название файла с данными
 DATA_JSON = "data_telphones.json"
 
-DATA_DEFAULT_KEY = "name"
+DATA_DEFAULT_KEY_NAME = "name"
 DATA_PHONES_KEY = "phones"
 DATA_BIRTHDAY_KEY = "birthday"
-DATA_EMAILS_KEY = "emails"
+DATA_EMAIL_KEY = "email"
 YELLOW_COLOR = "\033[33m"
 DEFAULT_COLOR = "\033[0m"
 
@@ -20,6 +20,13 @@ SEARCH = "Поиск записи"
 DELETE = "Удаление записи"
 UPDATE = "Изменение записи"
 EXIT = "Выход"
+
+PHONE = "phone"
+
+BUTTON_OK = "OK"
+BUTTON_CANCEL = "CANCEL"
+BUTTON_ADD_PHONE = "Add phone"
+BUTTON_DEL_PHONE = "Del phone"
 
 COMMAND = {
     "1" : VIEW, 
@@ -165,13 +172,14 @@ def update_data(name, data = load_data()):
 
 # Показ всего списка
 # По дефолту подгружаем из функии load_data()
-def view_all(data = []):
+def view_all(data = {}):
     if len(data) == 0:
         data = load_data() 
     if (len(data) == 0):           
         print_red("Список контактов пуст!") 
         return 0
     print(data)
+    return data
 
 # Сохранение записи
 # По дефолту подгружаем из функии load_data()
@@ -182,11 +190,11 @@ def save_recording_data(data = load_data()):
         return
     phones = input("Введите номер(а) телефона(ов) через пробел если их несколько: ")
     birthday = input("Введите дату рождения: ")
-    emails = input("Введите адрес(а) электронной почты через пробел если их несколько: ")              
+    email = input("Введите адрес электронной почты: ")              
     data[name] = {
         DATA_PHONES_KEY : phones.split(), 
         DATA_BIRTHDAY_KEY : birthday, 
-        DATA_EMAILS_KEY : emails.split()
+        DATA_EMAIL_KEY : email
         }
     print(f"data_save={data}")    
     save_data(data)
@@ -239,5 +247,96 @@ def program_cycle():
             print(f"Контакты: {str(', '.join(data.keys()))}")
             name = input(f"Введите имя контакта который хотите поменять: ")     
             update_data(name) 
+  
+# Преобразование словаря в строки с переносом и табуляцией
+def convert_to_str(data = load_data()):
+    str = ''
+    for k, v in data.items():
+        str_atr =''
+        for atr, val in dict(v).items():
+            str_val = ''
+            if isinstance(val, list):
+                for i, l in enumerate(val):
+                    if i < len(val) - 1:
+                        str_val += l + ','
+                    else:
+                        str_val += l
+            else:
+                str_val = val  
+            str_atr += f"\n \t {atr}: {str_val}"
+        str += f"{DATA_DEFAULT_KEY_NAME}: {k}{str_atr}  \n" 
+    return str
 
-program_cycle()
+def get_field_names(phones, fieldNames):
+    fn = [fieldNames[0]]
+    non_stop = True
+    count = 0
+    while non_stop:   
+        if phones == 1:
+            fn.append(PHONE)
+            non_stop = False
+            continue
+        else:
+            if count == 0:
+                fn.append(PHONE)
+                count+=1
+            else:
+                fn.append(f"{PHONE}{count}")
+            count+=1
+    fn.extend(fieldNames[-2:])
+
+def save_chois(data = load_data()):
+    msg = "Введите информацию для нового контакта \n (если требуется несколько телефонов - ввод через запятую)"
+    title = "Сохранение записи"
+    phones = 1
+    field_names = [DATA_DEFAULT_KEY_NAME, DATA_PHONES_KEY, DATA_BIRTHDAY_KEY, DATA_EMAIL_KEY]   
+    field_values = multenterbox(msg, title, field_names)
+    if field_values is None:
+        print("Cancel")
+        return
+    # Проверка на пустые поля
+    while 1:
+        errmsg = msg + '\n'            
+        for i, field_name in enumerate(field_names):
+            if field_values[i].strip() == "":
+                errmsg += "Поле '{}' не должно быть пустым!\n".format(field_name)
+        if errmsg == msg + '\n':
+            print("errmsg == msg + ")
+            break # no problems found
+        field_values = multenterbox(errmsg, title, field_names, field_values)
+        if field_values is None:           
+            print("Cancel")
+            break   
+    if field_values is None:           
+        print("Cancel")
+        return
+    
+    phones = []
+    # убираем пробелы в номерах телефона если есть
+    for phone in field_values[1].split(','):
+        phones.append(phone.strip()) 
+    print(f"phones={phones}") 
+    data[field_values[0]] = {
+        DATA_PHONES_KEY : phones, 
+        DATA_BIRTHDAY_KEY : field_values[2], 
+        DATA_EMAIL_KEY : field_values[3]
+        }
+    print(f"data_save={data}")    
+    save_data(data)
+
+def view_cycle():
+    non_stop = True
+    while non_stop:    
+        com = list(COMMAND.values())
+        choice = choicebox("Выберите запрос", "Главная форма", com)
+        print(f"choice={choice}")
+        if choice == COMMAND.get("1"):          
+            data = view_all()  
+            msgbox(convert_to_str(data), "Просмотр записей")
+        elif choice == COMMAND.get("2"):
+            save_chois()
+            continue
+        elif choice == COMMAND.get("q") or choice == 'x' or choice == None:     
+            return
+
+view_cycle()
