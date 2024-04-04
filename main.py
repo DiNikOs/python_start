@@ -245,22 +245,27 @@ def program_cycle():
             name = input(f"Введите имя контакта который хотите поменять: ")     
             update_data(name) 
   
+# Преобразование в строке через запятую если список
+def convert_val_to_str(val):
+    str_val = ''
+    if isinstance(val, list):
+        for i, l in enumerate(val):
+            if i < len(val) - 1:
+                str_val += l + ','
+            else:
+                str_val += l
+    else:
+        str_val = val 
+    return str_val
+
 # Преобразование словаря в строки с переносом и табуляцией
 def convert_to_str(data = load_data()):
     str = ''
     for k, v in data.items():
         str_atr =''
-        for atr, val in dict(v).items():
-            str_val = ''
-            if isinstance(val, list):
-                for i, l in enumerate(val):
-                    if i < len(val) - 1:
-                        str_val += l + ','
-                    else:
-                        str_val += l
-            else:
-                str_val = val  
-            str_atr += f"\n \t {atr}: {str_val}"
+        for atr, val in dict(v).items():              
+            str_atr += f"\n \t {atr}: {convert_val_to_str(val)}"
+            # str_atr += f"\n \t {atr}: {str_val}"
         str += f"{DATA_DEFAULT_KEY_NAME}: {k}{str_atr}\n" 
     return str
 
@@ -297,6 +302,20 @@ def check_and_get_values(msg, title, field_names, field_values, valid_checks = [
         if field_values is None:           
             print("Cancel")
             return []  
+
+def save_data_val(data, field_values):
+    phones = []
+    # убираем пробелы в номерах телефона если есть
+    for phone in field_values[1].split(','):
+        phones.append(phone.strip()) 
+
+    data[field_values[0]] = {
+        DATA_PHONES_KEY : phones, 
+        DATA_BIRTHDAY_KEY : field_values[2], 
+        DATA_EMAIL_KEY : field_values[3]
+        }
+    print(f"data_save={data}")    
+    save_data(data)
   
 def save_chois(data = load_data()):
     msg = "Введите информацию для нового контакта \n (если требуется несколько телефонов - ввод через запятую)\n"
@@ -312,19 +331,7 @@ def save_chois(data = load_data()):
     if len(field_values) == 0:           
         print("Cancel")
         return
-    
-    phones = []
-    # убираем пробелы в номерах телефона если есть
-    for phone in field_values[1].split(','):
-        phones.append(phone.strip()) 
-
-    data[field_values[0]] = {
-        DATA_PHONES_KEY : phones, 
-        DATA_BIRTHDAY_KEY : field_values[2], 
-        DATA_EMAIL_KEY : field_values[3]
-        }
-    print(f"data_save={data}")    
-    save_data(data)
+    save_data_val(data, field_values)    
 
 def find_chois():
     msg = "Введите название контакта\n "
@@ -353,40 +360,94 @@ def find_chois():
         if field_values is None:           
             print("Cancel")
             return  
+        
+def get_field_values(warn, title, field_names, names, com):
+    if len(names) == 0:
+        msg = f"Нет контактов для {com}! \n"
+    else:
+        msg = f"Выберите контакт для {com} \n{warn}"
+    
+    for name in names:
+        msg += name + "\n"   
+    return multenterbox(msg, title, field_names)
 
 def del_chois(): 
     non_stop = True
     warn = ""      
     while non_stop:      
         title = "Удаление контакта"
-        data = load_data()
-        com = list(data.keys())
-       
-        if len(com) == 0:
-            msg = "Нет контактов для удаления! \n"
-        else:
-            msg = f"Выберите контакт для удаления \n{warn}"
         field_names = [DATA_DEFAULT_KEY_NAME]
-        for c in com:
-            msg += c + "\n"   
-        field_values = multenterbox(msg, title, field_names)
+        data = load_data()
+        names = list(data.keys())
+             
+        field_values = get_field_values(warn, title, field_names, names, "удаления")
         if field_values is None:
             print("Cancel")
             return        
         # Проверка на пустые поля
-        field_values = check_and_get_values(msg, title, field_names, field_values)   
+        field_values = check_and_get_values(warn, title, field_names, field_values)   
         print(f"field_values={field_values}")     
         if field_values is None or len(field_values) == 0:
             print("Cancel")
             return   
         name = field_values[0]
-        if name not in com:
+        if name not in names:
             warn = f"Контакт '{name}' отсутствует!\n"
             continue
         else:
             warn = ""
         data.pop(name)
         save_data(data)    
+
+def update_chois(data = load_data()): 
+    non_stop=True
+    warn = ""
+    while non_stop:
+        title = "Изменение контакта"
+        field_names = [DATA_DEFAULT_KEY_NAME]
+        data = load_data()
+        names = list(data.keys())
+        field_values = get_field_values(warn, title, field_names, names, "изменения")
+        if field_values is None:
+            print("Cancel")
+            return        
+        # Проверка на пустые поля
+        field_values = check_and_get_values(warn, title, field_names, field_values)   
+        print(f"field_values={field_values}")     
+        if field_values is None or len(field_values) == 0:
+            print("Cancel")
+            return   
+        name = field_values[0]
+        if name not in names:
+            warn = f"Контакт '{name}' отсутствует!\n"
+            continue
+        else:
+            warn = ""
+        
+        data_name = data[name]
+        print(f"type={type(data_name)}")
+        print(f"data_name={data_name}")
+        msg = "Введите информацию которую хотите изменить \n (если требуется несколько телефонов - ввод через запятую)\n"
+        title = "Изменение записи"
+        field_names = [DATA_DEFAULT_KEY_NAME]  
+        field_values = [name] 
+        for k,v in data_name.items():
+            field_names.append(k)                     
+            field_values.append(convert_val_to_str(v))
+        field_values = multenterbox(msg, title, field_names, field_values)
+        print(f"field_values={field_values}")
+        if field_values is None:
+            print("Cancel")
+            return
+        # Проверка на пустые поля
+        field_values = check_and_get_values(msg, title, field_names, field_values)   
+        print(f"field_values={field_values}")
+        if len(field_values) == 0:           
+            print("Cancel")
+            return 
+        data.pop(name)
+        save_data_val(data, field_values)
+    # return
     
 def view_cycle():
     non_stop = True
@@ -416,6 +477,6 @@ def view_cycle():
             del_chois()             
         elif choice == COMMAND.get("6"): # изменение данных  
             print("Изменение записи")          
-            pass
+            update_chois()
     
 view_cycle()
