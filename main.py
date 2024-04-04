@@ -352,7 +352,41 @@ def find_chois():
             field_values = multenterbox(convert_to_str(data), title, field_names, field_values) 
         if field_values is None:           
             print("Cancel")
-            return              
+            return  
+
+def del_chois(): 
+    non_stop = True
+    warn = ""      
+    while non_stop:      
+        title = "Удаление контакта"
+        data = load_data()
+        com = list(data.keys())
+       
+        if len(com) == 0:
+            msg = "Нет контактов для удаления! \n"
+        else:
+            msg = f"Выберите контакт для удаления \n{warn}"
+        field_names = [DATA_DEFAULT_KEY_NAME]
+        for c in com:
+            msg += c + "\n"   
+        field_values = multenterbox(msg, title, field_names)
+        if field_values is None:
+            print("Cancel")
+            return        
+        # Проверка на пустые поля
+        field_values = check_and_get_values(msg, title, field_names, field_values)   
+        print(f"field_values={field_values}")     
+        if field_values is None or len(field_values) == 0:
+            print("Cancel")
+            return   
+        name = field_values[0]
+        if name not in com:
+            warn = f"Контакт '{name}' отсутствует!\n"
+            continue
+        else:
+            warn = ""
+        data.pop(name)
+        save_data(data)    
     
 def view_cycle():
     non_stop = True
@@ -378,8 +412,8 @@ def view_cycle():
             print("Поиск записи")            
             find_chois()
         elif choice == COMMAND.get("5"): # удаление
-            print("Удаление записи")  
-            pass
+            print("Удаление записи") 
+            del_chois()             
         elif choice == COMMAND.get("6"): # изменение данных  
             print("Изменение записи")          
             pass
