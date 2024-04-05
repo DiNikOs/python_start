@@ -16,6 +16,7 @@ DEFAULT_COLOR = "\033[0m"
 VIEW = "Просмотр записей"
 SAVE = "Сохранение записи"
 IMPORT_DATA = "Импорт данных"
+EXPORT_DATA = "Экспорт данных"
 SEARCH = "Поиск записи"
 DELETE = "Удаление записи"
 UPDATE = "Изменение записи"
@@ -32,9 +33,10 @@ COMMAND = {
     "1" : VIEW, 
     "2" : SAVE, 
     "3" : IMPORT_DATA, 
-    "4" : SEARCH, 
-    "5" : DELETE, 
-    "6" : UPDATE,
+    "4" : EXPORT_DATA, 
+    "5" : SEARCH, 
+    "6" : DELETE, 
+    "7" : UPDATE,
     'q' : EXIT
 }
 
@@ -44,38 +46,13 @@ def print_color(color_before, text, color_after = ''):
     if color_after != '':
         print(color_after)
 
-def print_green(text, color_after = ''):
-    print_color("\033[32m", text, color_after)
-
 def print_red(text, color_after = ''):
     print_color("\033[31m", text, color_after)
 
-def print_yellow(text, color_after = ''):
-    print_color(YELLOW_COLOR, text, color_after)
-
-def print_blue(text, color_after = ''):
-    print_color("\033[34m", text, color_after)
-
-def setAtributes(name_atr, atributes):
-    return
-
 # Сохраняем данные (сериализации JSON Python)
-def save_data(phonebook) :
-    with open(DATA_JSON, "w", encoding='utf-8') as write_file:
+def save_data(phonebook, path = DATA_JSON) :
+    with open(path, "w", encoding='utf-8') as write_file:
         json.dump(phonebook, write_file, ensure_ascii=False, indent=4)
-
-def import_data(phonebook):
-    choise = input("Выбирите откуда импортировать данные (1 - из файла json, 2 - из строки: ")
-    data = {}
-    print(f"choise={choise}")
-    if choise == "1":
-        file = input("Укажите путь для импорта: ")
-        print(f"file={file}")
-        data = load_data_json(file)
-    elif choise == "2":
-        data = input("Введите контакты строчкой: ")
-    phonebook.update(data)
-    save_data(phonebook)
     
 def load_data_json(file = DATA_JSON):
     with open(file, "r", encoding='utf-8') as read_file:
@@ -108,67 +85,6 @@ def load_data(data_keys=[]) :
         return {data_keys[1]: ph[data_keys[0]][data_keys[1]]}
     elif (len(data_keys) == 2):
         return {data_keys[1]: ph[data_keys[0]][data_keys[1]][data_keys[2]]}
-    
-# Изменить атрибут
-def update_data(name, data = load_data()):   
-    print(f"phonebook={data}")
-    if name in data:
-        data_get = data.pop(name) # получаем список атрибутов контакта name
-    else:
-        print_red(f"Контакт '{name}' не найден!")
-        return
-    if data_get == None or len(data_get) == 0:            
-        print_red("Контакт не найден!")
-        return
-    print(f"data_get={data_get}")     
-    d = [name]
-    d.extend(data_get.keys()) 
-    print(YELLOW_COLOR) # изменяем в жёлтый
-    com = input(f"Выбирите что хотите изменить '{', '.join(d)}' :").strip()
-    if com == '':
-        print_red("Вводимое значение должно быть не пустым!")
-        return
-    if com == str(name):
-        name_new = input(f"Введите новое название для контакта: ").strip()
-        if name_new == '':
-            print_red("Контакт не может быть пуст!")
-            return
-        name = name_new
-    elif com in d:
-        d = data_get.get(com) # получаем значения атрибута com по ключу
-        com_new = []
-        print(*d)
-        if isinstance(d, list):
-            non_stop = True
-            while non_stop: 
-                an = input(f"Хотите добавить запись - введите 'w', хотите изменить - введите 'u', закончить изменение - 'q': ").strip()  
-                if an == "u": # изменение записи           
-                    atr = input(f"Выбирите какое значение изменять '{', '.join(d)}': ").strip()
-                    if atr in d:
-                        d.pop(d.index(atr))       
-                        atr_new = input(f"Введите новое значение для {com} вместо {atr}: ").strip()
-                        d.append(atr_new) 
-                    else:
-                        print_red(f"Значение '{atr}' отсутствует", YELLOW_COLOR) # сначала красный потом жёлтый              
-                elif an == 'w': # добавить значение
-                    atr_new = input(f"Введите новое значение для {com}: ").strip()
-                    d.append(atr_new) 
-                elif an == 'q': # завершить изменение
-                    non_stop = False
-                else:
-                    print_red(f"Повторите выбор для '{com}'!")
-                print(*d)
-            com_new = d
-        else:
-            com_new = input(f"Введите новое значение для {com}: ").strip()
-        data_get[com] = com_new   
-        setAtributes(com, data_get)     
-        print(f"phonebook = {data}")
-    else:
-        print_red(f"Вводимое значение '{com}' не найдено в контакте!")
-        return
-    data[name] = data_get
-    save_data(data)
 
 # Показ всего списка
 # По дефолту подгружаем из функии load_data()
@@ -180,71 +96,7 @@ def view_all(data = {}):
         return 0
     print(data)
     return data
-
-# Сохранение записи
-# По дефолту подгружаем из функии load_data()
-def save_recording_data(data = load_data()):
-    name = input("Введите имя контакта: ")
-    if name in data.keys():
-        print_red("Контакт с таким именем уже есть в списке! Выбирете другое название контакта.")
-        return
-    phones = input("Введите номер(а) телефона(ов) через пробел если их несколько: ")
-    birthday = input("Введите дату рождения: ")
-    email = input("Введите адрес электронной почты: ")              
-    data[name] = {
-        DATA_PHONES_KEY : phones.split(), 
-        DATA_BIRTHDAY_KEY : birthday, 
-        DATA_EMAIL_KEY : email
-        }
-    print(f"data_save={data}")    
-    save_data(data)
-
-# Удаление записи
-# data - список из которого будем удалять по дефолту подгружаем из функии load_data()
-# key_del - ключ по  которому будем удалять
-def del_data(key_del, data = load_data()):
-    data.pop(key_del)
-    save_data(data)
-
-def program_cycle():
-    non_stop = True
-    while non_stop:
-        print_green(f"Комманды для работы: {COMMAND}", YELLOW_COLOR) # текст зелёный, потом жёлтый 
-        com = input("Введите комманду для работы: ")
-        if not com in COMMAND.keys(): 
-            print_red("Введена не верная команда! Повторите ввод")            
-            continue
-        if (com == 'q'): # выход
-            non_stop = False
-            print_red("Выполнен выход из программы!", DEFAULT_COLOR)      
-            continue
-        # data = load_data() 
-        if (com == "1"): # просмотр
-            print_blue("Просмотр записей")   
-            if view_all() == 0:  
-                continue            
-        elif (com == "2"): # сохранение
-            print_blue("Сохранение записи")
-            save_recording_data()
-        elif (com == "3"): # импорт
-            print_blue("Импорт данных")     
-            import_data()
-        elif (com == "4"): # поиск
-            print_blue("Поиск записи")
-            name = input("Введите имя контакта для поиска: ")
-            data = load_data([name])
-            if len(data) == 1:  
-                print(data)
-        elif (com == "5"): # удаление
-            print_blue("Удаление записи")
-            name = input("Введите имя контакта для удаления: ")       
-            del_data(name)
-        elif (com == "6"): # изменение данных  
-            print_blue("Изменение записи")      
-            print(f"Контакты: {str(', '.join(data.keys()))}")
-            name = input(f"Введите имя контакта который хотите поменять: ")     
-            update_data(name) 
-  
+ 
 # Преобразование в строке через запятую если список
 def convert_val_to_str(val):
     str_val = ''
@@ -268,24 +120,6 @@ def convert_to_str(data = load_data()):
             # str_atr += f"\n \t {atr}: {str_val}"
         str += f"{DATA_DEFAULT_KEY_NAME}: {k}{str_atr}\n" 
     return str
-
-def get_field_names(phones, fieldNames):
-    fn = [fieldNames[0]]
-    non_stop = True
-    count = 0
-    while non_stop:   
-        if phones == 1:
-            fn.append(PHONE)
-            non_stop = False
-            continue
-        else:
-            if count == 0:
-                fn.append(PHONE)
-                count+=1
-            else:
-                fn.append(f"{PHONE}{count}")
-            count+=1
-    fn.extend(fieldNames[-2:])
 
 # Проверка на валидность полей (не пустые поля) 
 # valid_checks - для каждого поля свои проверки на валидность
@@ -331,7 +165,28 @@ def save_chois(data = load_data()):
     if len(field_values) == 0:           
         print("Cancel")
         return
-    save_data_val(data, field_values)    
+    save_data_val(data, field_values)   
+
+def import_chois(data = load_data()):
+    msg = "Выберете файлы для импорта в формате json"
+    title = "Импорт данных"
+    paht_json = fileopenbox(msg=msg, title = title, default='*', filetypes=[["*.json", "JSON file"]], multiple=False)
+    if paht_json is None:
+        print("Cancel")
+        return        
+    
+    data_json = load_data_json(paht_json) 
+    data.update(data_json) 
+    save_data(data)
+
+def export_chois(data = load_data()):
+    msg = "Назовите файл для экспорта в формате json"
+    title = "Экспорт данных"
+    paht_json = filesavebox(msg=msg, title = title, default='phone_data.json', filetypes=[["*.json", "JSON file"]])
+    if paht_json is None:
+        print("Cancel")
+        return        
+    save_data(data, paht_json)
 
 def find_chois():
     msg = "Введите название контакта\n "
@@ -453,30 +308,33 @@ def view_cycle():
     non_stop = True
     while non_stop:    
         com = list(COMMAND.values())
-        choice = choicebox("Выберите запрос", "Главная форма", com)
+        choice = choicebox("Выберите действие", "Главная форма", com)
         print(f"choice={choice}")
         if choice == COMMAND.get("q") or choice == 'x' or choice == None:
-            print("Exit")       
+            print(choice)       
             return
         elif choice == COMMAND.get("1"): # отображение всего списка
-            print("Просмотр записей")             
+            print(choice)             
             data = view_all()  
-            msgbox(convert_to_str(data), "Просмотр записей")
+            msgbox(convert_to_str(data), choice)
         elif choice == COMMAND.get("2"): # сохранение
-            print("Сохранение записи")
+            print(choice)
             save_chois()
             continue
         elif choice == COMMAND.get("3"): # импорт
-            print("Импорт данных")     
-            pass
-        elif choice == COMMAND.get("4"): # поиск
-            print("Поиск записи")            
-            find_chois()
-        elif choice == COMMAND.get("5"): # удаление
-            print("Удаление записи") 
-            del_chois()             
-        elif choice == COMMAND.get("6"): # изменение данных  
-            print("Изменение записи")          
+            print(choice)     
+            import_chois()
+        elif choice == COMMAND.get("4"): # экспорт
+            print(choice)            
+            export_chois()
+        elif choice == COMMAND.get("5"): # поиск
+            print(choice) 
+            find_chois()        
+        elif choice == COMMAND.get("6"): # удаление  
+            print(choice)          
+            del_chois()     
+        elif choice == COMMAND.get("7"): # изменение данных  
+            print(choice)          
             update_chois()
     
 view_cycle()
