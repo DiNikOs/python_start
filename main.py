@@ -22,13 +22,6 @@ DELETE = "Удаление записи"
 UPDATE = "Изменение записи"
 EXIT = "Выход"
 
-PHONE = "phone"
-
-BUTTON_OK = "OK"
-BUTTON_CANCEL = "CANCEL"
-BUTTON_ADD_PHONE = "Add phone"
-BUTTON_DEL_PHONE = "Del phone"
-
 COMMAND = {
     "1" : VIEW, 
     "2" : SAVE, 
